@@ -14,6 +14,14 @@ def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         content = file.read()
 
+    dos = []
+    sections = content.split("don't()")
+    dos.append(sections[0])
+    for section in sections[1:]:
+        dos = dos + section.split("do()")[1:]
+
+    content = "".join(dos)
+
     total = 0
     pattern = r"mul\((\d{1,3}),(\d{1,3})\)"
     for match in re.finditer(pattern, content):
