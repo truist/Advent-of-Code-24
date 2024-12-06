@@ -1,15 +1,34 @@
 #!/usr/bin/env python3
 
 """
-a module docstring
+Advent of Code 2024-01
 """
 
 import argparse
 
+def similarity(left, right):
+    """
+    Calculate the similarity between the two lists
+    """
+    simil=0
+    for l in left:
+        simil += l * right.count(l)
+
+    print(f"Total similarity: {simil}")
+
+def distance(left, right):
+    """
+    Calculate the distance between the two lists
+    """
+    dist = 0
+    for l, r in zip(left, right):
+        dist += abs(r - l)
+
+    print(f"Total distance: {dist}")
 
 def main(inputfile):
     """
-    a function docstring
+    Process the input data
     """
 
     left = []
@@ -23,14 +42,8 @@ def main(inputfile):
     left.sort()
     right.sort()
 
-    distance = 0
-    for l, r in zip(left, right):
-        distance += abs(r - l)
-
-    print(f"Total distance: {distance}")
-
-
-
+    distance(left, right)
+    similarity(left, right)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-01")
