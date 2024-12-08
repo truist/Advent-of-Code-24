@@ -8,6 +8,10 @@ import argparse
 
 def check_operations(desired, values):
     # print(f"testing {desired} = {values}")
+    if desired % 1 != 0 or desired < 0:
+        return False
+    desired = int(desired)
+
     if len(values) == 1:
         return desired == values[0]
 
@@ -18,6 +22,13 @@ def check_operations(desired, values):
     if check_operations(desired / values[-1], values[0:-1]):
         # print(f"True: multiply: {desired} = {values}")
         return True
+
+    right = str(values[-1])
+    if str(desired).endswith(right):
+        left = str(desired)[:-len(right)]
+        if check_operations(int(left), values[0:-1]):
+            # print(f"True: concatenated: {desired} = {values}")
+            return True
 
     return False
 
