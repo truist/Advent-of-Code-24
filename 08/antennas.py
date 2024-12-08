@@ -21,19 +21,26 @@ def find_antennas(grid):
 
     return antennas
 
-def find_antinodes(left, right, max_rows, max_cols):
-    # (1,8) (2,5)
-    row_offset = right[0] - left[0] # 1
-    col_offset = right[1] - left[1] # -3
-
-    one = (left[0] - row_offset, left[1] - col_offset) # (0, 11)
-    two = (right[0] + row_offset, right[1] + col_offset) # (3, 2)
-
+def find_antinodes_in_direction(direction, cur_row, row_offset, max_rows, cur_col, col_offset, max_cols):
     in_bounds = []
-    if 0 <= one[0] < max_rows and 0 <= one[1] < max_cols:
-        in_bounds += [one]
-    if 0 <= two[0] < max_rows and 0 <= two[1] < max_cols:
-        in_bounds += [two]
+    while True:
+        cur_row = cur_row + row_offset * direction
+        cur_col = cur_col + col_offset * direction
+
+        if 0 <= cur_row < max_rows and 0 <= cur_col < max_cols:
+            in_bounds += [(cur_row, cur_col)]
+        else:
+            break
+
+    return in_bounds
+
+def find_antinodes_for_pair(left, right, max_rows, max_cols):
+    row_offset = right[0] - left[0]
+    col_offset = right[1] - left[1]
+
+    in_bounds = [left, right]
+    in_bounds += find_antinodes_in_direction(1, left[0], row_offset, max_rows, left[1], col_offset, max_cols)
+    in_bounds += find_antinodes_in_direction(-1, left[0], row_offset, max_rows, left[1], col_offset, max_cols)
 
     # print(f"{left}, {right} gave {in_bounds}")
 
@@ -44,18 +51,16 @@ def find_all_antinodes(all_antennas, max_rows, max_cols):
     for antennas in all_antennas.values():
         for l, left in enumerate(antennas[0:-1]):
             for right in antennas[l+1:]:
-                antinodes += find_antinodes(left, right, max_rows, max_cols)
+                antinodes += find_antinodes_for_pair(left, right, max_rows, max_cols)
 
     return antinodes
 
 
 def main(inputfile):
-    total = 0
     with open(inputfile, 'r', encoding='utf-8') as file:
         grid = [list(line.strip()) for line in file]
 
     antennas = find_antennas(grid)
-    # print(antennas)
     antinodes = find_all_antinodes(antennas, len(grid), len(grid[0]))
     # print(antinodes)
 
