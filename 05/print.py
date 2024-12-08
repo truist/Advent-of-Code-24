@@ -6,6 +6,26 @@ Advent of Code 2024-05
 
 import argparse
 
+def fix_one_invalid(each, rules):
+    for rule in rules:
+        try:
+            left = each.index(rule[0])
+            right = each.index(rule[1])
+            if right < left:
+                # just swap them
+                right_val = each[right]
+                each[right] = each[left]
+                each[left] = right_val
+        except ValueError:
+            pass # this rule doesn't apply; just try the next one
+
+def fix_all_invalid(invalid, rules):
+    for each in invalid:
+        while True:
+            fix_one_invalid(each, rules)
+            if check_print(each, rules):
+                break
+
 def check_print(each, rules):
     """
     check a single print to see if it meets all the rules
@@ -26,11 +46,14 @@ def find_valid_prints(prints, rules):
     check each print to see if it meets all the rules
     """
     valid = []
+    invalid = []
     for each in prints:
         if check_print(each, rules):
             valid += [each]
+        else:
+            invalid += [each]
 
-    return valid
+    return (valid, invalid)
 
 def main(inputfile):
     """
@@ -50,9 +73,11 @@ def main(inputfile):
             else:
                 prints += [line.split(",")]
 
-    valid = find_valid_prints(prints, rules)
-    # print(valid)
+    (valid, invalid) = find_valid_prints(prints, rules)
     print(sum(int(each[len(each) // 2]) for each in valid))
+
+    fix_all_invalid(invalid, rules)
+    print(sum(int(each[len(each) // 2]) for each in invalid))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-05")
