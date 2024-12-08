@@ -7,6 +7,9 @@ Advent of Code 2024-05
 import argparse
 
 def fix_one_invalid(each, rules):
+    """
+    do one pass through the rules, swapping bad pairs
+    """
     for rule in rules:
         try:
             left = each.index(rule[0])
@@ -20,6 +23,9 @@ def fix_one_invalid(each, rules):
             pass # this rule doesn't apply; just try the next one
 
 def fix_all_invalid(invalid, rules):
+    """
+    fix all the invalid prints
+    """
     for each in invalid:
         while True:
             fix_one_invalid(each, rules)
