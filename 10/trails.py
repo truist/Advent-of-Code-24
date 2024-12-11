@@ -33,7 +33,7 @@ def main(inputfile):
     for r, row in enumerate(grid):
         for c, val in enumerate(row):
             if val == 0:
-                score += len(set(find_reachable_nines(grid, r, c)))
+                score += len(find_reachable_nines(grid, r, c))
 
     print(score)
 
