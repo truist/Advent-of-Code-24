@@ -6,35 +6,42 @@ Advent of Code 2024-11
 
 import argparse
 
-def do_blink(stones):
-    i = 0;
-    while True:
-        cur_val = stones[i]
-        if cur_val == 0:
-            stones[i] = 1
-        elif len(str(cur_val)) % 2 == 0:
-            str_val = str(cur_val)
-            half_len = len(str_val) // 2
-            left, right = str_val[:half_len], str_val[half_len:]
-            stones[i] = int(left)
-            stones.insert(i + 1, int(right))
-            i += 1
-        else:
-            stones[i] = cur_val * 2024
+cache = {}
 
-        i += 1
-        if i == len(stones):
-            break
+def do_blinks(cur_val, blinks):
+    if blinks == 0:
+        return 1
+
+    if cur_val == 0:
+        return cache_blinks(1, blinks - 1)
+
+    if len(str(cur_val)) % 2 == 0:
+        str_val = str(cur_val)
+        half_len = len(str_val) // 2
+        left, right = str_val[:half_len], str_val[half_len:]
+        return cache_blinks(int(left), blinks - 1) + cache_blinks(int(right), blinks - 1)
+
+    return cache_blinks(cur_val * 2024, blinks - 1)
+
+def cache_blinks(cur_val, blinks):
+    key = (cur_val, blinks)
+    if key in cache:
+        return cache[key]
+
+    answer = do_blinks(cur_val, blinks)
+    cache[key] = answer
+
+    return answer
 
 def main(inputfile, blinks):
     with open(inputfile, 'r', encoding='utf-8') as file:
         stones = [int(val) for val in file.read().split()]
 
-    for blink in range(blinks):
-        # print(stones)
-        do_blink(stones)
+    total = 0
+    for stone in stones:
+        total += do_blinks(stone, blinks)
 
-    print(len(stones))
+    print(total)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-11")
