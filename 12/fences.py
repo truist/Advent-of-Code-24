@@ -132,6 +132,14 @@ def group_plant_fences(grid, plant_record):
         if plant_record.fences[W]:
             group_neighbors(grid, plant_record, north, south, W)
 
+def map_fences(grid, regions):
+    for region in regions:
+        for plant_record in region:
+            map_plant_fences(grid, plant_record)
+
+        for plant_record in region:
+            group_plant_fences(grid, plant_record)
+
 def get_distinct_segments(segments):
     distinct = set()
     for segment in segments:
@@ -139,37 +147,25 @@ def get_distinct_segments(segments):
 
     return list(distinct)
 
-def calc_region_price(grid, region):
-    for plant_record in region:
-        map_plant_fences(grid, plant_record)
-
-    for plant_record in region:
-        group_plant_fences(grid, plant_record)
-
+def calc_region_price(region):
     region_segments = []
     for plant_record in region:
         for fence in plant_record.fences:
             if fence and fence.segment:
-                # print(f"adding fence segment: {fence.segment}")
                 region_segments += [fence.segment]
 
-    distinct = get_distinct_segments(region_segments)
-    total_sides = len(distinct)
-    # print(f"region {region[0].plant}:", distinct, total_sides)
-    return len(region) * total_sides
-
+    return len(region) * len(get_distinct_segments(region_segments))
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         grid = [list(line.strip()) for line in file]
 
     regions = map_regions(grid)
-    # print(grid)
-    # print(regions)
+    map_fences(grid, regions)
 
     total = 0
     for region in regions:
-        total += calc_region_price(grid, region)
+        total += calc_region_price(region)
 
     print(total)
 
