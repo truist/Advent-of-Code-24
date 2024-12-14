@@ -89,12 +89,14 @@ def add_fence_to_segment(has_segment, needs_segment, direction):
     needs_segment.fences[direction].segment = has_segment.fences[direction].segment
 
 def group_fences(grid, middle, neighbor, direction):
-    if middle.fences[direction].segment:
-        if neighbor.fences[direction].segment:
-            merge_segments(grid, middle.fences[direction].segment, neighbor.fences[direction].segment, direction)
+    middle_segment = middle.fences[direction].segment
+    neighbor_segment = neighbor.fences[direction].segment
+    if middle_segment:
+        if neighbor_segment:
+            merge_segments(grid, middle_segment, neighbor_segment, direction)
         else:
             add_fence_to_segment(middle, neighbor, direction)
-    elif neighbor.fences[direction].segment:
+    elif neighbor_segment:
         add_fence_to_segment(neighbor, middle, direction)
     else:
         middle.fences[direction].segment = make_segment_record(middle, direction)
