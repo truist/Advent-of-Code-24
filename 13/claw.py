@@ -35,7 +35,7 @@ def update_machine(machine, line_type, x, y):
         offset = machine.b
     elif line_type == "Prize":
         offset = machine.prize
-        # scale_factor = 10000000000000
+        scale_factor = 10000000000000
     else:
         raise ValueError(f"Invalid line type: {line_type}")
 
@@ -55,13 +55,11 @@ def calc_possible_combos(a, b, prize):
     # math clues from ChatGPT
     # code from ChatGPT
 
-    combos = []
-
     current_gcd = gcd(a, b)
     # print(f"a: {a}, b: {b}, prize: {prize}, gcd: {current_gcd}")
 
     if prize % current_gcd != 0:
-        return combos
+        return
 
     current_gcd, x0, y0 = extended_euclidean(a, b)
     # print(f"current_gcd: {current_gcd}, x0: {x0}, y0: {y0}")
@@ -78,9 +76,10 @@ def calc_possible_combos(a, b, prize):
     k_max = floor(y0 / step_y) if step_y > 0 else ceil(y0 / step_y)
     # print(f"k_min: {k_min}, k_max: {k_max}")
 
-    if k_min > k_max: # or k_min < 0 or k_max < 0:
-        return combos
+    if k_min > k_max:
+        return
 
+    # print("iterating over range of size: ", k_max - k_min)
     for k in range(k_min, k_max + 1):
         x = x0 + k * step_x
         y = y0 - k * step_y
@@ -88,10 +87,6 @@ def calc_possible_combos(a, b, prize):
             # print(f"k: {k}, x: {x}, y: {y}")
             # print(a * x + b * y, prize)
             yield(x, y)
-            # combos.append((x, y))
-
-    # print(combos)
-    # return combos
 
 def calc_required_tokens(machine):
     print(machine)
@@ -100,13 +95,6 @@ def calc_required_tokens(machine):
         if possible_a * machine.a.y + possible_b * machine.b.y == machine.prize.y:
             print(possible_a, possible_b)
             return possible_a * A_COST + possible_b * B_COST
-
-    # possible_x = calc_possible_combos(machine.a.x, machine.b.x, machine.prize.x)
-    # possible_y = calc_possible_combos(machine.a.y, machine.b.y, machine.prize.y)
-    # intersection = [combo for combo in possible_x if combo in possible_y]
-    # if len(intersection) > 0:
-    #     combo = intersection[0]
-    #     return combo[0] * A_COST + combo[1] * B_COST
 
     return 0
 
