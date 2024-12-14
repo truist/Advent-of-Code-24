@@ -7,12 +7,22 @@ Advent of Code 2024-12
 import argparse
 from dataclasses import dataclass
 
+N = 0
+E = 1
+S = 2
+W = 3
+
+@dataclass
+class Fence:
+    segment: list
+
 @dataclass
 class PlantRecord:
     plant: str
     region: list
     row: int
     col: int
+    fences: list
 
 def neighbors(grid, r, c):
     for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -21,9 +31,11 @@ def neighbors(grid, r, c):
         if 0 <= new_row < len(grid) and 0 <= new_col < len(grid[0]):
             yield new_row, new_col
 
+def make_fences_record():
+    return [Fence(None), Fence(None), Fence(None), Fence(None)]
 
 def convert_plants_to_records(grid, r, c, plant, region):
-    plant_record = PlantRecord(plant, region, r, c)
+    plant_record = PlantRecord(plant, region, r, c, make_fences_record())
     grid[r][c] = plant_record
     region += [plant_record]
 
@@ -45,21 +57,102 @@ def map_regions(grid):
 
     return regions
 
-def calc_plant_fence(grid, plant_record):
-    fence = 4
+def map_plant_fences(grid, plant_record):
     for new_row, new_col in neighbors(grid, plant_record.row, plant_record.col):
         if grid[new_row][new_col].plant == plant_record.plant:
-            fence -= 1
+            if new_row < plant_record.row:
+                plant_record.fences[N] = None
+            elif new_row > plant_record.row:
+                plant_record.fences[S] = None
+            elif new_col < plant_record.col:
+                plant_record.fences[W] = None
+            elif new_col > plant_record.col:
+                plant_record.fences[E] = None
+            else:
+                raise Exception(f"Programmer error: impossible direction: {plant_record}, {new_row}, {new_col}")
 
-    return fence
+def get_neighbor(grid, r, c):
+    if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
+        return grid[r][c]
+
+    return None
+
+def make_segment_record(plant_record, direction):
+    return [(plant_record.row, plant_record.col, direction)]
+
+def add_fence_to_segment(has_segment, needs_segment, direction):
+    has_segment.fences[direction].segment += make_segment_record(needs_segment, direction)
+    needs_segment.fences[direction].segment = has_segment.fences[direction].segment
+
+def group_fences(middle, neighbor, direction):
+    if middle.fences[direction].segment:
+        if neighbor.fences[direction].segment:
+            if middle.fences[direction].segment != neighbor.fences[direction].segment:
+                raise Exception(f"Oh no, now what? {direction}, {middle.fences[direction].segment}, {neighbor.fences[direction].segment}")
+        else:
+            add_fence_to_segment(middle, neighbor, direction)
+    elif neighbor.fences[direction].segment:
+        add_fence_to_segment(neighbor, middle, direction)
+    else:
+        middle.fences[direction].segment = make_segment_record(middle, direction)
+        add_fence_to_segment(middle, neighbor, direction)
+
+def group_side(middle, neighbor, direction):
+    if neighbor:
+        if middle.plant == neighbor.plant:
+            if middle.fences[direction] and neighbor.fences[direction]:
+                group_fences(middle, neighbor, direction)
+
+    if not middle.fences[direction].segment:
+        middle.fences[direction].segment = make_segment_record(middle, direction)
+
+def group_neighbors(middle, side1, side2, direction):
+    group_side(middle, side1, direction)
+    group_side(middle, side2, direction)
+
+def group_plant_fences(grid, plant_record):
+    if plant_record.fences[N] or plant_record.fences[S]:
+        west = get_neighbor(grid, plant_record.row, plant_record.col - 1)
+        east = get_neighbor(grid, plant_record.row, plant_record.col + 1)
+        if plant_record.fences[N]:
+            group_neighbors(plant_record, west, east, N)
+        if plant_record.fences[S]:
+            group_neighbors(plant_record, west, east, S)
+
+    if plant_record.fences[E] or plant_record.fences[W]:
+        north = get_neighbor(grid, plant_record.row - 1, plant_record.col)
+        south = get_neighbor(grid, plant_record.row + 1, plant_record.col)
+        if plant_record.fences[E]:
+            group_neighbors(plant_record, north, south, E)
+        if plant_record.fences[W]:
+            group_neighbors(plant_record, north, south, W)
+
+def get_distinct_segments(segments):
+    distinct = set()
+    for segment in segments:
+        distinct.add(tuple(segment))
+
+    return list(distinct)
 
 def calc_region_price(grid, region):
-    total_fence = 0
     for plant_record in region:
-        total_fence += calc_plant_fence(grid, plant_record)
+        map_plant_fences(grid, plant_record)
 
-    # print(f"region with {region[0].plant} has area {len(region)} and fence {total_fence}")
-    return total_fence * len(region)
+    for plant_record in region:
+        group_plant_fences(grid, plant_record)
+
+    region_segments = []
+    for plant_record in region:
+        for fence in plant_record.fences:
+            if fence and fence.segment:
+                # print(f"adding fence segment: {fence.segment}")
+                region_segments += [fence.segment]
+
+    distinct = get_distinct_segments(region_segments)
+    total_sides = len(distinct)
+    # print(f"region {region[0].plant}:", distinct, total_sides)
+    return len(region) * total_sides
+
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
@@ -74,13 +167,6 @@ def main(inputfile):
         total += calc_region_price(grid, region)
 
     print(total)
-
-    # iterate the map, collecting region records
-        # map from cell to region
-        # map from region to cells
-    # region area is easy
-    # walk each region to calculate perimeter
-    # calculate total price
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-12")
