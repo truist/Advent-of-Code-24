@@ -42,59 +42,28 @@ def update_machine(machine, line_type, x, y):
     offset.x = int(x.strip()[2:]) + scale_factor
     offset.y = int(y.strip()[2:]) + scale_factor
 
-def extended_euclidean(a, b):
-    # math clues from ChatGPT
-    # code from https://en.wikibooks.org/wiki/Algorithm_Implementation/Mathematics/Extended_Euclidean_algorithm#Recursive_algorithm_2
-    if a == 0:
-        return b, 0, 1
-
-    current_gcd, x, y = extended_euclidean(b % a, a)
-    return current_gcd, y - (b // a) * x, x
-
-def calc_possible_combos(a, b, prize):
-    # math clues from ChatGPT
-    # code from ChatGPT
-
-    current_gcd = gcd(a, b)
-    # print(f"a: {a}, b: {b}, prize: {prize}, gcd: {current_gcd}")
-
-    if prize % current_gcd != 0:
-        return
-
-    current_gcd, x0, y0 = extended_euclidean(a, b)
-    # print(f"current_gcd: {current_gcd}, x0: {x0}, y0: {y0}")
-
-    scale = prize // current_gcd
-    x0 *= scale
-    y0 *= scale
-
-    step_x = b // current_gcd
-    step_y = a // current_gcd
-    # print(f"scale: {scale}, x0: {x0}, y0: {y0}, step_x: {step_x}, step_y: {step_y}")
-
-    k_min = ceil(-x0 / step_x) if step_x > 0 else floor(-x0 / step_x)
-    k_max = floor(y0 / step_y) if step_y > 0 else ceil(y0 / step_y)
-    # print(f"k_min: {k_min}, k_max: {k_max}")
-
-    if k_min > k_max:
-        return
-
-    # print("iterating over range of size: ", k_max - k_min)
-    for k in range(k_min, k_max + 1):
-        x = x0 + k * step_x
-        y = y0 - k * step_y
-        if x >= 0 and y >= 0:
-            # print(f"k: {k}, x: {x}, y: {y}")
-            # print(a * x + b * y, prize)
-            yield(x, y)
-
 def calc_required_tokens(machine):
-    print(machine)
-    for possible_a, possible_b in calc_possible_combos(machine.a.x, machine.b.x, machine.prize.x):
-        # print(f"possible_a: {possible_a}, possible_b: {possible_b}")
-        if possible_a * machine.a.y + possible_b * machine.b.y == machine.prize.y:
-            print(possible_a, possible_b)
-            return possible_a * A_COST + possible_b * B_COST
+    # system of equations:
+    # A1 * x + B1 * y = P1
+    # A2 * x + B2 * y = P2
+    # solve for y:
+    # y = (P1 * A2 - P2 * A1) / (B1 * A2 - A1 * B2)
+    # solve for x:
+    # x = (P1 - B1 * y) / A1
+
+    # pylint: disable=invalid-name
+    A1 = machine.a.x
+    B1 = machine.b.x
+    P1 = machine.prize.x
+    A2 = machine.a.y
+    B2 = machine.b.y
+    P2 = machine.prize.y
+
+    y = (P1 * A2 - P2 * A1) / (B1 * A2 - A1 * B2)
+    if floor(y) == y:
+        x = (P1 - B1 * y) / A1
+        if floor(x) == x:
+            return int(x * A_COST + y * B_COST)
 
     return 0
 
