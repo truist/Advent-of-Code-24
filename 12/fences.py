@@ -75,6 +75,12 @@ def get_neighbor(grid, r, c):
 
     return None
 
+def merge_segments(grid, left, right, direction):
+    new_segment = left + right
+    # replace all the old segment records with the new one
+    for segment_record in new_segment:
+        grid[segment_record[0]][segment_record[1]].fences[direction].segment = new_segment
+
 def make_segment_record(plant_record, direction):
     return [(plant_record.row, plant_record.col, direction)]
 
@@ -82,9 +88,11 @@ def add_fence_to_segment(has_segment, needs_segment, direction):
     has_segment.fences[direction].segment += make_segment_record(needs_segment, direction)
     needs_segment.fences[direction].segment = has_segment.fences[direction].segment
 
-def group_fences(middle, neighbor, direction):
+def group_fences(grid, middle, neighbor, direction):
     if middle.fences[direction].segment:
-        if not neighbor.fences[direction].segment:
+        if neighbor.fences[direction].segment:
+            merge_segments(grid, middle.fences[direction].segment, neighbor.fences[direction].segment, direction)
+        else:
             add_fence_to_segment(middle, neighbor, direction)
     elif neighbor.fences[direction].segment:
         add_fence_to_segment(neighbor, middle, direction)
@@ -92,35 +100,35 @@ def group_fences(middle, neighbor, direction):
         middle.fences[direction].segment = make_segment_record(middle, direction)
         add_fence_to_segment(middle, neighbor, direction)
 
-def group_side(middle, neighbor, direction):
+def group_side(grid, middle, neighbor, direction):
     if neighbor:
         if middle.plant == neighbor.plant:
             if middle.fences[direction] and neighbor.fences[direction]:
-                group_fences(middle, neighbor, direction)
+                group_fences(grid, middle, neighbor, direction)
 
     if not middle.fences[direction].segment:
         middle.fences[direction].segment = make_segment_record(middle, direction)
 
-def group_neighbors(middle, side1, side2, direction):
-    group_side(middle, side1, direction)
-    group_side(middle, side2, direction)
+def group_neighbors(grid, middle, side1, side2, direction):
+    group_side(grid, middle, side1, direction)
+    group_side(grid, middle, side2, direction)
 
 def group_plant_fences(grid, plant_record):
     if plant_record.fences[N] or plant_record.fences[S]:
         west = get_neighbor(grid, plant_record.row, plant_record.col - 1)
         east = get_neighbor(grid, plant_record.row, plant_record.col + 1)
         if plant_record.fences[N]:
-            group_neighbors(plant_record, west, east, N)
+            group_neighbors(grid, plant_record, west, east, N)
         if plant_record.fences[S]:
-            group_neighbors(plant_record, west, east, S)
+            group_neighbors(grid, plant_record, west, east, S)
 
     if plant_record.fences[E] or plant_record.fences[W]:
         north = get_neighbor(grid, plant_record.row - 1, plant_record.col)
         south = get_neighbor(grid, plant_record.row + 1, plant_record.col)
         if plant_record.fences[E]:
-            group_neighbors(plant_record, north, south, E)
+            group_neighbors(grid, plant_record, north, south, E)
         if plant_record.fences[W]:
-            group_neighbors(plant_record, north, south, W)
+            group_neighbors(grid, plant_record, north, south, W)
 
 def get_distinct_segments(segments):
     distinct = set()
