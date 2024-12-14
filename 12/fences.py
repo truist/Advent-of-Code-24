@@ -68,8 +68,6 @@ def map_plant_fences(grid, plant_record):
                 plant_record.fences[W] = None
             elif new_col > plant_record.col:
                 plant_record.fences[E] = None
-            else:
-                raise Exception(f"Programmer error: impossible direction: {plant_record}, {new_row}, {new_col}")
 
 def get_neighbor(grid, r, c):
     if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
@@ -86,10 +84,7 @@ def add_fence_to_segment(has_segment, needs_segment, direction):
 
 def group_fences(middle, neighbor, direction):
     if middle.fences[direction].segment:
-        if neighbor.fences[direction].segment:
-            if middle.fences[direction].segment != neighbor.fences[direction].segment:
-                raise Exception(f"Oh no, now what? {direction}, {middle.fences[direction].segment}, {neighbor.fences[direction].segment}")
-        else:
+        if not neighbor.fences[direction].segment:
             add_fence_to_segment(middle, neighbor, direction)
     elif neighbor.fences[direction].segment:
         add_fence_to_segment(neighbor, middle, direction)
