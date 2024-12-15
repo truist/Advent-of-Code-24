@@ -5,15 +5,46 @@ Advent of Code 2024-15
 """
 
 import argparse
+import time
+from dataclasses import dataclass
 
 ROBOT = "@"
-BOX = "O"
+SMALL_BOX = "O"
+BOX_LEFT = "["
+BOX_RIGHT = "]"
 WALL = "#"
 EMPTY = "."
 N = "^"
 E = ">"
 S = "v"
 W = "<"
+
+@dataclass
+class Box:
+    row: int
+    left: int
+    right: int
+
+def widen_grid(grid):
+    wide_grid = []
+    for row in grid:
+        wide_row = []
+        wide_grid.append(wide_row)
+        for val in row:
+            if val == ROBOT:
+                new_cell = (ROBOT, EMPTY)
+            elif val == SMALL_BOX:
+                new_cell = (BOX_LEFT, BOX_RIGHT)
+            elif val == WALL:
+                new_cell = (WALL, WALL)
+            elif val == EMPTY:
+                new_cell = (EMPTY, EMPTY)
+            else:
+                raise ValueError(f"Unknown cell value: {val}")
+
+            wide_row += [*new_cell]
+
+    return wide_grid
 
 def find_robot(grid):
     for r, row in enumerate(grid):
@@ -34,39 +65,103 @@ def get_step_for_direction(direction):
         return 0, -1
     raise ValueError(f"Illegal direction: {direction}")
 
-def gather_line_ahead(grid, r, c, direction):
+def walk_line_ahead(grid, r, c, direction):
     rx, cx = get_step_for_direction(direction)
     r += rx
     c += cx
 
-    cells = []
     while 0 <= r < len(grid) and 0 <= c < len(grid[0]):
-        cells += grid[r][c]
+        yield r, c
         r += rx
         c += cx
 
-    return cells
-
-def can_move(cells_ahead):
-    for cell in cells_ahead:
+def can_move(grid, r, c, direction):
+    for r_ahead, c_ahead in walk_line_ahead(grid, r, c, direction):
+        cell = grid[r_ahead][c_ahead]
         if cell == WALL:
             return False
-        if cell != BOX:
+        if cell == EMPTY:
             return True
+        if direction in [N, S]:
+            if cell == BOX_LEFT:
+                if not can_move(grid, r_ahead, c_ahead + 1, direction):
+                    return False
+            if cell == BOX_RIGHT:
+                if not can_move(grid, r_ahead, c_ahead - 1, direction):
+                    return False
     return False
 
-def shift_boxes(grid, r_ahead, c_ahead, rx, cx):
-    box_in_the_way = False
-    while True:
-        if grid[r_ahead][c_ahead] == BOX:
-            box_in_the_way = True
-            r_ahead += rx
-            c_ahead += cx
+
+def shift_boxes_ew(grid, r, c, cx):
+    last_box = -1
+    moving_w = cx < 0
+    for c_ahead in range(c, 0 if moving_w else len(grid[0]), -1 if moving_w else 1):
+        if grid[r][c_ahead] in [BOX_LEFT, BOX_RIGHT]:
+            last_box = c_ahead
         else:
             break
 
-    if box_in_the_way:
-        grid[r_ahead][c_ahead] = BOX
+    if last_box != -1:
+        for c_ahead in range(last_box, c, 2 if moving_w else -2):
+            if cx < 0:
+                grid[r][c_ahead - 1] = BOX_LEFT
+                grid[r][c_ahead] = BOX_RIGHT
+            else:
+                grid[r][c_ahead + 1] = BOX_RIGHT
+                grid[r][c_ahead] = BOX_LEFT
+        return True
+    return False
+
+def find_boxes_in_row(grid, row, left, right):
+    boxes = []
+    col = left
+    while col < right:
+        if grid[row][col] == BOX_LEFT:
+            boxes.append(Box(row, col, col + 1))
+            col += 2
+        else:
+            col += 1
+
+    return boxes
+
+def shift_box_list_ns(grid, box_list, rx):
+    # print(f"shifting: {box_list}, {rx}")
+    current_row = box_list[0].row
+    current_left_edge = box_list[0].left
+    current_right_edge = box_list[-1].right
+
+    next_row = current_row + rx
+    next_left_edge = current_left_edge
+    next_right_edge = current_right_edge
+    if grid[next_row][current_left_edge] == BOX_RIGHT:
+        next_left_edge -= 1
+    if grid[next_row][current_right_edge] == BOX_LEFT:
+        next_right_edge += 1
+
+    next_box_list = find_boxes_in_row(grid, next_row, next_left_edge, next_right_edge)
+    if len(next_box_list) > 0:
+        shift_box_list_ns(grid, next_box_list, rx)
+
+    for col in range(current_left_edge, current_right_edge + 1):
+        grid[next_row][col] = grid[current_row][col]
+        grid[current_row][col] = EMPTY
+
+def shift_boxes_ns(grid, r, c, rx):
+    cell = grid[r][c]
+    if cell == BOX_LEFT:
+        shift_box_list_ns(grid, [Box(r, c, c + 1)], rx)
+        grid[r][c + 1] = EMPTY
+        return True
+    if cell == BOX_RIGHT:
+        shift_box_list_ns(grid, [Box(r, c - 1, c)], rx)
+        grid[r][c - 1] = EMPTY
+        return True
+    return False
+
+def shift_boxes(grid, r, c, rx, cx):
+    if cx != 0:
+        return shift_boxes_ew(grid, r, c, cx)
+    return shift_boxes_ns(grid, r, c, rx)
 
 def do_move(grid, r, c, direction):
     grid[r][c] = EMPTY
@@ -74,26 +169,36 @@ def do_move(grid, r, c, direction):
     rx, cx = get_step_for_direction(direction)
     r += rx
     c += cx
-    shift_boxes(grid, r, c, rx, cx)
+    shifted = shift_boxes(grid, r, c, rx, cx)
 
     grid[r][c] = ROBOT
-    return r, c
-
+    return r, c, shifted
 
 def move_robot(grid, r, c, direction):
-    if can_move(gather_line_ahead(grid, r, c, direction)):
+    if can_move(grid, r, c, direction):
         return do_move(grid, r, c, direction)
-    return r, c
+    return r, c, True
 
 def print_grid(grid):
     for row in grid:
         print("".join(row))
 
+def print_grid_segment(grid, r, c, direction):
+    buffer = 7
+    # print(f"r: {r}")
+    for current_r in range(max(0, r - buffer), min(r + buffer + 1, len(grid))):
+        c_min = max(0, c - buffer)
+        c_max = min(c + buffer + 1, len(grid[0]))
+        cells = grid[current_r][c_min:c_max]
+        if current_r == r:
+            cells[buffer] = direction
+        print("".join(cells))
+
 def calc_gps(grid):
     gps = 0
     for r, row in enumerate(grid):
         for c, val in enumerate(row):
-            if val == BOX:
+            if val == BOX_LEFT:
                 gps += 100 * r + c
 
     return gps
@@ -104,10 +209,31 @@ def main(inputfile):
         grid = [list(line.strip()) for line in first.split()]
         moves = "".join(second.split())
 
+    grid = widen_grid(grid)
+    # print_grid(grid)
     r, c = find_robot(grid)
+
+    interesting = False
+    step = 0
+    last_direction = "@"
     for direction in moves:
-        r, c = move_robot(grid, r, c, direction)
-    print_grid(grid)
+        # clear the screen
+        print("\033[2J\033[H", end="")
+        print_grid_segment(grid, r, c, last_direction)
+        last_direction = direction
+        print(f"next move is {direction} step {step}")
+        if step > 1898:
+            if 1898 <= step < 1910:
+                time.sleep(4)
+            elif interesting:
+                time.sleep(1)
+            else:
+                time.sleep(0.1)
+
+        r, c, interesting = move_robot(grid, r, c, direction)
+        step += 1
+
+    # print_grid(grid)
 
     print(calc_gps(grid))
 
