@@ -5,6 +5,7 @@ Advent of Code 2024-14
 """
 
 import argparse
+import time
 from dataclasses import dataclass
 
 @dataclass
@@ -14,8 +15,8 @@ class Robot:
     dx: int
     dy: int
 
-    def move(self, time, width, height):
-        for _ in range(time):
+    def move(self, steps, width, height):
+        for _ in range(steps):
             self.x += self.dx
             self.y += self.dy
         self.x %= width
@@ -57,14 +58,41 @@ def safety_factor(robots, mid_width, mid_height):
     # print(nw, ne, se, sw)
     return nw * ne * se * sw
 
+def print_grid(robots, width, height):
+    grid = []
+    for _ in range(height):
+        row = []
+        grid.append(row)
+        for _ in range(width):
+            row.append(".")
+
+    for robot in robots:
+        if grid[robot.y][robot.x] == ".":
+            grid[robot.y][robot.x] = "1"
+        else:
+            grid[robot.y][robot.x] = str(int(grid[robot.y][robot.x]) + 1)
+
+    for row in grid:
+        print("".join(row))
+
+def take_steps(robots, steps, width, height):
+    for robot in robots:
+        robot.move(steps, width, height)
+    return steps
+
 def main(inputfile, width, height):
     robots = []
     with open(inputfile, 'r', encoding='utf-8') as file:
         for line in file:
             robots.append(parse_line(line))
 
-    for robot in robots:
-        robot.move(100, width, height)
+    total_steps = 0
+    for _ in range(10000):
+        total_steps += take_steps(robots, 1, width, height)
+        sf = safety_factor(robots, width // 2, height // 2)
+        if sf <= 84543414:
+            print(total_steps, sf)
+            print_grid(robots, width, height)
 
     print(safety_factor(robots, width // 2, height // 2))
 
