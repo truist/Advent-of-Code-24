@@ -113,16 +113,27 @@ def shift_boxes_ew(grid, r, c, cx):
     return False
 
 def find_boxes_in_row(grid, row, left, right):
-    boxes = []
+    box_lists = []
+    current_list = []
+
     col = left
-    while col < right:
+    blank_spaces = 0
+    while col <= right:
+        if blank_spaces == 2 and len(current_list) > 0:
+            box_lists.append(current_list)
+            current_list = []
         if grid[row][col] == BOX_LEFT:
-            boxes.append(Box(row, col, col + 1))
+            current_list.append(Box(row, col, col + 1))
             col += 2
+            blank_spaces = 0
         else:
             col += 1
+            blank_spaces += 1
 
-    return boxes
+    if len(current_list) > 0:
+        box_lists.append(current_list)
+
+    return box_lists
 
 def shift_box_list_ns(grid, box_list, rx):
     # print(f"shifting: {box_list}, {rx}")
@@ -138,11 +149,13 @@ def shift_box_list_ns(grid, box_list, rx):
     if grid[next_row][current_right_edge] == BOX_LEFT:
         next_right_edge += 1
 
-    next_box_list = find_boxes_in_row(grid, next_row, next_left_edge, next_right_edge)
-    if len(next_box_list) > 0:
-        shift_box_list_ns(grid, next_box_list, rx)
+    next_box_lists = find_boxes_in_row(grid, next_row, next_left_edge, next_right_edge)
+    if len(next_box_lists) > 0:
+        for current_list in next_box_lists:
+            shift_box_list_ns(grid, current_list, rx)
 
     for col in range(current_left_edge, current_right_edge + 1):
+        # print(f"moving {current_row},{col} to {next_row},{col}")
         grid[next_row][col] = grid[current_row][col]
         grid[current_row][col] = EMPTY
 
@@ -183,15 +196,15 @@ def print_grid(grid):
     for row in grid:
         print("".join(row))
 
-def print_grid_segment(grid, r, c, direction):
+def print_grid_segment(grid, r, c, direction, replace_robot_with_direction):
     buffer = 7
     # print(f"r: {r}")
     for current_r in range(max(0, r - buffer), min(r + buffer + 1, len(grid))):
-        c_min = max(0, c - buffer)
-        c_max = min(c + buffer + 1, len(grid[0]))
+        c_min = max(0, c - buffer * 2)
+        c_max = min(c + buffer * 2 + 1, len(grid[0]))
         cells = grid[current_r][c_min:c_max]
-        if current_r == r:
-            cells[buffer] = direction
+        if replace_robot_with_direction and current_r == r:
+            cells[buffer * 2] = direction
         print("".join(cells))
 
 def calc_gps(grid):
@@ -202,6 +215,29 @@ def calc_gps(grid):
                 gps += 100 * r + c
 
     return gps
+
+def animate(grid, r, c, direction, last_direction, interesting, step):
+    # clear the screen
+    if not 3104 <= step <= 3106:
+        print("\033[2J\033[H", end="")
+    print_grid_segment(grid, r, c, last_direction, True)
+    # print("")
+    # print_grid_segment(grid, 11, 45, last_direction, False)
+    print(f"next move is {direction} step {step}")
+    print(f"current position is {r},{c}")
+    if step > 4930:
+        if 1898 <= step < 1905:
+            time.sleep(4)
+        elif 3104 <= step <= 3106:
+            time.sleep(4)
+        elif 3145 <= step <= 3155:
+            time.sleep(4)
+        elif 4940 <= step <= 4945:
+            time.sleep(4)
+        elif interesting:
+            time.sleep(.1)
+        else:
+            time.sleep(0.01)
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
@@ -217,23 +253,14 @@ def main(inputfile):
     step = 0
     last_direction = "@"
     for direction in moves:
-        # clear the screen
-        print("\033[2J\033[H", end="")
-        print_grid_segment(grid, r, c, last_direction)
-        last_direction = direction
-        print(f"next move is {direction} step {step}")
-        if step > 1898:
-            if 1898 <= step < 1910:
-                time.sleep(4)
-            elif interesting:
-                time.sleep(1)
-            else:
-                time.sleep(0.1)
+        # animate(grid, r, c, direction, last_direction, interesting, step)
 
         r, c, interesting = move_robot(grid, r, c, direction)
+
+        last_direction = direction
         step += 1
 
-    # print_grid(grid)
+    print_grid(grid)
 
     print(calc_gps(grid))
 
