@@ -83,11 +83,39 @@ class Machine:
             # print(self)
             self.instruction()
 
-        return ",".join(str(val) for val in self.output)
+    def execute_until_first_output(self):
+        while self.ip < len(self.tape) - 1:
+            self.instruction()
+            if len(self.output) > 0:
+                return self.output[0]
+        raise ValueError("Program terminated before generating output!")
 
 def extract_register_value(line):
     _, right = line.split(":")
     return int(right.strip())
+
+def test_input(template_machine, test_value):
+    machine = Machine(
+        test_value,
+        template_machine.b,
+        template_machine.c,
+        template_machine.tape,
+        0,
+        []
+    )
+    return machine.execute_until_first_output()
+
+def find_magic_value(template_machine, start, goals):
+    for offset in range(8):
+        test_value = start + offset
+        if test_input(template_machine, test_value) == goals[0]:
+            if len(goals) == 1:
+                return test_value
+            result = find_magic_value(template_machine, test_value * 8, goals[1:])
+            if result is not None:
+                return result
+
+    return None
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
@@ -101,10 +129,17 @@ def main(inputfile):
         _, right = program.split(":")
         tape = [int(val) for val in right.strip().split(",")]
 
-        machine = Machine(a, b, c, tape, 0, [])
+        # machine = Machine(a, b, c, tape, 0, [])
 
-    print(machine.execute())
-    # print(machine)
+    template_machine = Machine(a, b, c, tape, 0, [])
+    goals = list(reversed(tape))
+    found_value = find_magic_value(template_machine, 1, goals)
+
+    print(f"found value {found_value}, trying it...")
+    machine = Machine(found_value, b, c, tape, 0, [])
+    machine.execute()
+    print(tape)
+    print(machine.output)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-17")
@@ -112,3 +147,22 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.input)
+
+
+"""
+Program: 2,4,1,3,7,5,4,1,1,3,0,3,5,5,3,0
+
+B = A % 8
+B = B ^ 3
+C = A // 2^B
+B = B ^ C
+B = B ^ 3
+A = A // 8
+output B % 8
+if A > 0 goto beginning
+
+while A = A // 8 > 0:
+    output = ((((A % 8) ^ 3) ^ (A // (2 ** ((A % 8) ^ 3)))) ^ 3) % 8
+"""
+
+
