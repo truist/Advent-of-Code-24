@@ -6,32 +6,38 @@ Advent of Code 2024-19
 
 import argparse
 
-def can_make(pattern, towels):
+def count_ways(pattern, towels, cache):
     if len(pattern) == 0:
-        return True
+        return 1
+
+    if pattern in cache:
+        return cache[pattern]
+
+    ways = 0
     for towel in towels:
         if pattern.startswith(towel):
             new_start = len(towel)
-            if can_make(pattern[new_start:], towels):
-                return True
+            sub_pattern = pattern[new_start:]
+            new_ways = count_ways(sub_pattern, towels, cache)
+            if new_ways > 0:
+                cache[sub_pattern] = new_ways
+                ways += new_ways
 
-    return False
+    return ways
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         towels, patterns = file.read().split("\n\n")
         towels = [towel.strip() for towel in towels.split(",")]
         patterns = patterns.strip().split("\n")
-    # print(towels)
-    # print(patterns)
 
-    can_do = 0
+    ways = 0
+    cache = {}
     for pattern in patterns:
         # print(f"testing {pattern}")
-        if can_make(pattern, towels):
-            can_do += 1
+        ways += count_ways(pattern, towels, cache)
 
-    print(can_do)
+    print(ways)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-19")
