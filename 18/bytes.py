@@ -29,7 +29,19 @@ def find_shortest_path(rows, cols, walls):
 
     return -1
 
-def main(inputfile, width, height, time):
+def zoom_into_answer(width, height, byte_coords, start, stop, step):
+    print(f"zooming from {start} to {stop} step {step}")
+    for time in range(start, stop, step):
+        print(f"trying {time}")
+        if find_shortest_path(width, height, byte_coords[0:time]) == -1:
+            print("blocked")
+            if step == 1:
+                return time
+            return zoom_into_answer(width, height, byte_coords, time - step, time + 1, step // 10)
+
+    return zoom_into_answer(width, height, byte_coords, time, len(byte_coords), step // 10)
+
+def main(inputfile, width, height):
     byte_coords = []
     with open(inputfile, 'r', encoding='utf-8') as file:
         for line in file:
@@ -37,14 +49,15 @@ def main(inputfile, width, height, time):
             byte_coords.append((int(y), int(x))) # swap x and y for r and c
     # print(byte_coords)
 
-    print(find_shortest_path(width, height, byte_coords[0:time]))
+    answer = zoom_into_answer(width, height, byte_coords, 0, len(byte_coords), 1000)
+    r, c = byte_coords[answer - 1]
+    print(f"{c},{r}") # switch back to x,y
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Advent of Code 2024-18")
     parser.add_argument("input", help="input data file")
     parser.add_argument("width", type=int, help="input data file")
     parser.add_argument("height", type=int, help="input data file")
-    parser.add_argument("time", type=int, help="input data file")
 
     args = parser.parse_args()
-    main(args.input, args.width, args.height, args.time)
+    main(args.input, args.width, args.height)
