@@ -35,14 +35,13 @@ def convert_grid(grid):
     return start
 
 def neighbors(grid, cell, dist):
-    for step in STEPS:
-        new_r = cell.r + step[0] * dist
-        new_c = cell.c + step[1] * dist
-
-        if 0 <= new_r < len(grid) and 0 <= new_c < len(grid[0]):
-            neighbor = grid[new_r][new_c]
-            if neighbor.val != WALL:
-                yield neighbor
+    for new_r in range(cell.r - dist, cell.r + dist + 1):
+        remainder = dist - abs(cell.r - new_r)
+        for new_c in range(cell.c - remainder, cell.c + remainder + 1):
+            if 0 <= new_r < len(grid) and 0 <= new_c < len(grid[0]):
+                neighbor = grid[new_r][new_c]
+                if neighbor.val != WALL:
+                    yield neighbor
 
 def map_distances(grid, start):
     queue = deque([start])
@@ -77,8 +76,9 @@ def print_grid(grid):
 def find_shortcuts(grid, path, min_savings):
     shortcuts = set()
     for current_cell in path:
-        for jump in neighbors(grid, current_cell, 2):
-            if jump.dist - current_cell.dist - 2 >= min_savings:
+        for jump in neighbors(grid, current_cell, 20):
+            shortcut_length = abs(jump.r - current_cell.r) + abs(jump.c - current_cell.c)
+            if jump.dist - current_cell.dist - shortcut_length >= min_savings:
                 shortcuts.add((current_cell.r, current_cell.c, jump.r, jump.c))
 
     return shortcuts
@@ -91,7 +91,7 @@ def main(inputfile, min_savings):
     start = convert_grid(grid)
     path = map_distances(grid, start)
     # print_grid(grid)
-    print(len(path))
+    # print(len(path))
 
     shortcuts = find_shortcuts(grid, path, min_savings)
     # print(shortcuts)
