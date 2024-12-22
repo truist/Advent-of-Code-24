@@ -21,7 +21,12 @@ dkp = {
 def add_path(dd, neg, pos):
     return (neg if dd < 0 else pos) * abs(dd)
 
+path_cache = {}
 def get_path_between(start_char, end_char, keypad):
+    cache_key = (start_char, end_char, "d" if keypad == dkp else "n")
+    if cache_key in path_cache:
+        return path_cache[cache_key]
+
     start_pos = keypad[start_char]
     end_pos = keypad[end_char]
 
@@ -54,30 +59,47 @@ def get_path_between(start_char, end_char, keypad):
         if dc > 0:
             path += ">" * dc
 
+    path_cache[cache_key] = path
+    # print(f"path_cache size: {len(path_cache)}")
     return path
+
+length_cache = {}
+def get_final_length(code, keypads):
+    if len(keypads) == 0:
+        return len(code)
+
+    cache_key = (code, len(keypads))
+    if cache_key in length_cache:
+        return length_cache[cache_key]
+
+    # print(f"evaluating {code} with {len(keypads)} keypads")
+
+    final_length = 0
+
+    last_char = "A"
+    for char in code:
+        indirect_str = get_path_between(last_char, char, keypads[0]) + "A"
+        final_length += get_final_length(indirect_str, keypads[1:])
+        last_char = char
+
+    length_cache[cache_key] = final_length
+    # print(f"length_cache size: {len(length_cache)}")
+    return final_length
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         codes = [line.strip() for line in file]
     # print(codes)
 
-    keypads = [nkp, dkp, dkp]
+    keypads = [nkp]
+    for _ in range(25):
+        keypads.append(dkp)
 
     complexity = 0
     for code in codes:
-        simpler_str = code
-        for keypad in keypads:
-            print(simpler_str)
-            indirect_str = ""
-            last_char = "A"
-            for char in simpler_str:
-                indirect_str += get_path_between(last_char, char, keypad) + "A"
-                last_char = char
-            simpler_str = indirect_str
-        print(indirect_str)
-
-        print(len(indirect_str), int(code[0:-1]))
-        complexity += len(indirect_str) * int(code[0:-1])
+        final_length = get_final_length(code, keypads)
+        print(final_length, int(code[0:-1]))
+        complexity += final_length * int(code[0:-1])
         print()
     print(complexity)
 
