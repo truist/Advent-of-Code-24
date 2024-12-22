@@ -19,5 +19,5 @@ cp template/template.py "$daystr/$pyname.py"
 sed -i ""  "s/NEWDAY/$daystr/g" "$daystr/$pyname.py"
 
 cd "$daystr"
-vim *
+vim "$pyname.py" test.txt input.txt
 
