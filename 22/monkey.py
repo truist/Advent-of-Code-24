@@ -5,9 +5,15 @@ Advent of Code 2024-22
 """
 
 import argparse
-from dataclasses import dataclass
 
 SEQ_LEN = 4
+
+all_sequences = {}
+def update_all_sequences(sequence, price):
+    if sequence not in all_sequences:
+        all_sequences[sequence] = price
+    else:
+        all_sequences[sequence] += price
 
 class Buyer:
     def __init__(self):
@@ -15,7 +21,6 @@ class Buyer:
         self.prices = []
         self.deltas = []
 
-        self.max_price = -1
         self.sequence_cache = {}
 
     def append(self, secret, last_price):
@@ -23,22 +28,19 @@ class Buyer:
 
         price = secret % 10
         self.prices.append(price)
-        self.max_price = max(self.max_price, price)
 
         if last_price is not None:
             self.deltas.append(price - last_price)
         else:
             self.deltas.append(None)
 
-        return price
-
-    def cache_sequences(self):
-        for i in range(SEQ_LEN - 1, len(self.prices)):
-            price = self.prices[i]
-            start, end = i - 3, i + 1
-            sequence = tuple(self.deltas[start:end])
+        if len(self.deltas) > SEQ_LEN:
+            sequence = tuple(self.deltas[-SEQ_LEN:])
             if sequence not in self.sequence_cache:
                 self.sequence_cache[sequence] = price
+                update_all_sequences(sequence, price)
+
+        return price
 
 def mix(result, secret):
     return result ^ secret
@@ -58,8 +60,6 @@ def iterate(seed, count):
         secret = prune(mix(secret // 32, secret))
         secret = prune(mix(secret * 2048, secret))
 
-    return buyer
-
 def get_total(sequence, buyers):
     total = 0
     for buyer in buyers:
@@ -68,37 +68,25 @@ def get_total(sequence, buyers):
 
     return total
 
-def find_optimal_sequence(buyers):
-    for buyer in buyers:
-        buyer.cache_sequences()
-        # print(buyer.sequence_cache)
-
-    seen = set()
-    best_total = 0
+def find_optimal_sequence():
+    max_price = 0
     best_sequence = None
-    for buyer in buyers:
-        for sequence in buyer.sequence_cache:
-            if sequence not in seen:
-                seen.add(sequence)
-                total = get_total(sequence, buyers)
-                if total > best_total:
-                    best_total = total
-                    best_sequence = sequence
-                    print(best_sequence, best_total)
+    for sequence, price in all_sequences.items():
+        if price > max_price:
+            print(f"new max price: {price} with sequence {sequence}")
+            max_price = price
+            best_sequence = sequence
 
-    return best_sequence, best_total
+    return best_sequence, max_price
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         buyer_seeds = [int(line.strip()) for line in file]
-    # print(buyer_seeds)
 
-    buyers = []
     for seed in buyer_seeds:
-        buyers.append(iterate(seed, 2000))
-        # print(steps)
+        iterate(seed, 2000)
 
-    sequence, total = find_optimal_sequence(buyers)
+    sequence, total = find_optimal_sequence()
     print(sequence)
     print(total)
 
