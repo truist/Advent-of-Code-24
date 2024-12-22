@@ -42,31 +42,19 @@ class Buyer:
 
         return price
 
-def mix(result, secret):
-    return result ^ secret
+def prune_mix(secret, modified):
+    return (modified ^ secret) % 16777216
 
-def prune(secret):
-    return secret % 16777216
-
-def iterate(seed, count):
+def iterate(secret, count):
     buyer = Buyer()
 
-    secret = seed
-    last_price = None
+    last_price = buyer.append(secret, None)
     for _ in range(count):
+        secret = prune_mix(secret * 64, secret)
+        secret = prune_mix(secret // 32, secret)
+        secret = prune_mix(secret * 2048, secret)
+
         last_price = buyer.append(secret, last_price)
-
-        secret = prune(mix(secret * 64, secret))
-        secret = prune(mix(secret // 32, secret))
-        secret = prune(mix(secret * 2048, secret))
-
-def get_total(sequence, buyers):
-    total = 0
-    for buyer in buyers:
-        if sequence in buyer.sequence_cache:
-            total += buyer.sequence_cache[sequence]
-
-    return total
 
 def find_optimal_sequence():
     max_price = 0
