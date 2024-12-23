@@ -32,9 +32,6 @@ def pair_up(pairings):
         right.pair(left)
     return computers
 
-def check_start_letter(name, start_letter):
-    return name[0] == start_letter
-
 def intersection(left, right):
     return list(sorted(set(left) & set(right)))
 
@@ -47,29 +44,19 @@ def find_fully_connected(subset, computers):
         fully_connected = intersection(fully_connected, full_list(computers[name]))
     return fully_connected
 
-def add_fully_connected(candidates, size, groups, computers, start_letter):
-    if len(candidates) < size or tuple(candidates) in groups:
+def add_fully_connected(candidates, groups, computers):
+    if tuple(candidates) in groups:
         return
 
     fully_connected = find_fully_connected(candidates, computers)
-    if len(fully_connected) == size:
-        groups.add(tuple(fully_connected))
-    elif len(fully_connected) > size:
-        for subset in combinations(fully_connected, size):
-            for name in subset:
-                if check_start_letter(name, start_letter):
-                    groups.add(subset)
-                    break
+    groups.add(tuple(fully_connected))
 
-def find_groups(computers, size, start_letter):
+def find_groups(computers):
     groups = set()
     for computer in computers.values():
-        if not check_start_letter(computer.name, start_letter):
-            continue
-
         for partner in computer.connected.values():
             candidates = intersection(full_list(computer), full_list(partner))
-            add_fully_connected(candidates, size, groups, computers, start_letter)
+            add_fully_connected(candidates, groups, computers)
 
     return groups
 
@@ -79,9 +66,17 @@ def main(inputfile):
     # print(pairings)
 
     computers = pair_up(pairings)
-    groups = find_groups(computers, 3, "t")
-    # print(groups)
-    print(len(groups))
+    groups = find_groups(computers)
+
+    max_len = 0
+    longest_group = tuple()
+    for group in groups:
+        if len(group) > max_len:
+            max_len = len(group)
+            longest_group = group
+
+    print(",".join(list(longest_group)))
+    # print(len(groups))
 
 
 if __name__ == "__main__":
