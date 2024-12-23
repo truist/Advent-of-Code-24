@@ -6,7 +6,6 @@ Advent of Code 2024-23
 
 import argparse
 from dataclasses import dataclass
-from itertools import combinations
 
 @dataclass
 class Computer:
