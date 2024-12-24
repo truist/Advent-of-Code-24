@@ -15,6 +15,20 @@ class Gate:
     out: str
     value: int
 
+def parse_inputs(input_lines):
+    inputs = {}
+    for input_line in input_lines.split("\n"):
+        name, value = input_line.split(":")
+        inputs[name.strip()] = int(value.strip())
+    return inputs
+
+def parse_gates(gate_lines):
+    gates = {}
+    for gate_line in gate_lines.strip().split("\n"):
+        gate = make_gate(gate_line)
+        gates[gate.out] = gate
+    return gates
+
 def make_gate(gate_line):
     rule, output = gate_line.split("->")
     left, op, right = rule.split()
@@ -43,22 +57,7 @@ def calc_output(gate, gates, inputs):
 
     return gate.value
 
-def main(inputfile):
-    with open(inputfile, 'r', encoding='utf-8') as file:
-        input_lines, gate_lines = file.read().split("\n\n")
-
-    inputs = {}
-    for input_line in input_lines.split("\n"):
-        name, value = input_line.split(":")
-        inputs[name.strip()] = int(value.strip())
-    # print(inputs)
-
-    gates = {}
-    for gate_line in gate_lines.strip().split("\n"):
-        gate = make_gate(gate_line)
-        gates[gate.out] = gate
-    # print(gates)
-
+def propagate_signals(gates, inputs):
     z_names = []
     for name, gate in gates.items():
         if name.startswith("z"):
@@ -68,7 +67,17 @@ def main(inputfile):
     bits = []
     for name in reversed(sorted(z_names)):
         bits.append(gates[name].value)
-    # print(bits)
+    return bits
+
+
+def main(inputfile):
+    with open(inputfile, 'r', encoding='utf-8') as file:
+        input_lines, gate_lines = file.read().split("\n\n")
+
+    inputs = parse_inputs(input_lines)
+    gates = parse_gates(gate_lines)
+
+    bits = propagate_signals(gates, inputs)
 
     # trick courtesy ChatGPT
     print(int("".join(map(str, bits)), 2))
