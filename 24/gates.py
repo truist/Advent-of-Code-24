@@ -42,8 +42,7 @@ class Circuit:
     outputs: list
 
     def input_bit_indexes(self):
-        for bit in range(len(self.outputs) - 1):
-            yield bit
+        yield from range(len(self.outputs) - 1)
 
     def bit_name(self, prefix, index):
         return f"{prefix}{index:02}"
@@ -88,10 +87,11 @@ class Circuit:
 
         return gate.value
 
-    def propagate_signals(self, swaps):
+    def propagate_signals(self, swaps, output_bits):
         self.reset_signals()
         for index, gate in self.z_gates():
-            self.outputs[index] = self.calc_output(gate, swaps, True)
+            if index in output_bits:
+                self.outputs[index] = self.calc_output(gate, swaps, True)
 
     def test_bit(self, bit, swaps):
         # print(f"testing bit {bit}")
@@ -107,7 +107,7 @@ class Circuit:
             self.inputs[self.bit_name("x", bit)] = case_input[0]
             self.inputs[self.bit_name("y", bit)] = case_input[1]
 
-            self.propagate_signals(swaps)
+            self.propagate_signals(swaps, (bit, bit + 1))
 
             actual_output = (self.outputs[bit], self.outputs[bit + 1])
             if actual_output != case_output:
@@ -234,15 +234,22 @@ def find_problem_gate_candidates(circuit):
     output_upstreams = set()
     for bit in circuit.input_bit_indexes():
         if not circuit.test_bit(bit, []):
+            print(f"found bad bit: {bit}")
             input_downstreams |= circuit.streams(bit, False)
             output_upstreams |= circuit.streams(bit, True)
             output_upstreams |= circuit.streams(bit + 1, True)
 
     # print(sorted(input_downstreams))
     # print(sorted(output_upstreams))
-    candidates = set(input_downstreams) & set(output_upstreams)
+    candidates = sorted(list(input_downstreams | output_upstreams)) # XXX FIXME should be &
     print(candidates)
     return candidates
+
+def find_first_bad_bit(circuit, known_swaps):
+    for bit in circuit.input_bit_indexes():
+        if not circuit.test_bit(bit, known_swaps):
+            return bit
+    return -1
 
 def try_swap(test_swap, circuit, candidates, known_swaps, first_bad_bit):
     candidates = [candidate for candidate in candidates if candidate not in test_swap]
@@ -250,28 +257,31 @@ def try_swap(test_swap, circuit, candidates, known_swaps, first_bad_bit):
     # print(f"test known_swaps at {first_bad_bit}: {known_swaps}")
     return find_swaps(circuit, candidates, known_swaps, first_bad_bit)
 
-def find_swaps(circuit, candidates, known_swaps, first_bad_bit):
-    # print(f"testing swaps at {first_bad_bit} with {len(candidates)} candidates and {len(known_swaps)} known swaps")
-    bad_bit = False
-    for bit in circuit.input_bit_indexes():
-        if not circuit.test_bit(bit, known_swaps):
-            if bit <= first_bad_bit:
-                # print(f"found early-bad bit at {bit}")
-                return None
+def find_swaps(circuit, candidates, known_swaps, min_bad_bit):
+    # print(f"testing swaps at {min_bad_bit} with {len(candidates)} candidates and {len(known_swaps)} known swaps")
+    if len(known_swaps) > 8:
+        # print(f"too many swaps: {len(known_swaps)}")
+        return None
 
-            print(f"got a new bad bit: {bit}; {known_swaps}")
-            bad_bit = True
-            for test_swap in combinations(candidates, 2):
-                found_swaps = try_swap(test_swap, circuit, candidates, known_swaps, bit)
-                if found_swaps is not None:
-                    print(f"found swaps! {found_swaps}, {known_swaps}")
-                    known_swaps += found_swaps
-                    return known_swaps
+    first_bad_bit = find_first_bad_bit(circuit, known_swaps)
 
-            print(f"no test swaps worked at {bit}")
-            return None
+    if first_bad_bit < 0:
+        print(f"no bad bits! {known_swaps}")
+        return known_swaps
 
-    return None if bad_bit else known_swaps
+    if first_bad_bit <= min_bad_bit:
+        # print(f"found early-bad bit at {bit}")
+        return None
+
+    print(f"got a new bad bit: {first_bad_bit} with {len(known_swaps)} known swaps and {len(candidates)} candidates")
+    for test_swap in combinations(candidates, 2):
+        found_swaps = try_swap(test_swap, circuit, candidates, known_swaps, first_bad_bit)
+        if found_swaps is not None:
+            print(f"found swaps! {found_swaps}, {known_swaps}")
+            return found_swaps
+
+    print(f"no test swaps worked at {first_bad_bit}")
+    return None
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
