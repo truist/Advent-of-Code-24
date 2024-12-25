@@ -181,17 +181,11 @@ def find_problem_gate_candidates(circuit):
     candidates = set()
     for bit in circuit.input_bit_indexes():
         if not circuit.test_bit(bit, []):
-            # print(f"found bad bit: {bit}")
             input_downstreams = circuit.streams(bit, False)
             output_upstreams = circuit.streams(bit, True)
             output_upstreams |= circuit.streams(bit + 1, True)
-            # print(sorted(input_downstreams))
-            # print(sorted(output_upstreams))
             candidates |= (input_downstreams & output_upstreams)
 
-    # print(sorted(input_downstreams))
-    # print(sorted(output_upstreams))
-    # candidates = list(input_downstreams & output_upstreams)
     candidates = sorted(candidates)
     # print(f"candidates: {candidates}")
     return candidates
@@ -205,11 +199,9 @@ def find_first_bad_bit(circuit, known_swaps):
 def try_swap(test_swap, circuit, candidates, known_swaps, first_bad_bit):
     candidates = [candidate for candidate in candidates if candidate not in test_swap]
     known_swaps = list(known_swaps) + list(test_swap)
-    # print(f"test known_swaps at {first_bad_bit}: {known_swaps}")
     return find_swaps(circuit, candidates, known_swaps, first_bad_bit)
 
 def find_swaps(circuit, candidates, known_swaps, min_bad_bit):
-    # print(f"testing swaps at {min_bad_bit} with {len(candidates)} candidates and {len(known_swaps)} known swaps")
     if len(known_swaps) > 8:
         # print(f"too many swaps: {len(known_swaps)}")
         return None
@@ -217,10 +209,7 @@ def find_swaps(circuit, candidates, known_swaps, min_bad_bit):
     first_bad_bit = find_first_bad_bit(circuit, known_swaps)
 
     if first_bad_bit < 0:
-        # print(f"no bad bits! {known_swaps}")
         if verify_result(circuit, known_swaps):
-            # print("verified result!")
-            # print(",".join(sorted(known_swaps)))
             return known_swaps
         return None
 
@@ -228,20 +217,12 @@ def find_swaps(circuit, candidates, known_swaps, min_bad_bit):
         # print(f"found early-bad bit at {bit}")
         return None
 
-    # print(f"got a new bad bit: {first_bad_bit} with {len(known_swaps)} known swaps and {len(candidates)} candidates")
-    successful_swaps = None
     for test_swap in combinations(candidates, 2):
         found_swaps = try_swap(test_swap, circuit, candidates, known_swaps, first_bad_bit)
         if found_swaps is not None:
-            # print(f"found swaps for {first_bad_bit}! {found_swaps}, {known_swaps}")
             return found_swaps
-            # if successful_swaps is not None:
-            #     print(f"found a second successful swap for {first_bad_bit}! {successful_swaps}; {found_swaps}")
-            # successful_swaps = found_swaps
-    return successful_swaps
 
-    # print(f"no test swaps worked at {first_bad_bit}")
-    # return None
+    return None
 
 def to_decimal(binary):
     return int("".join([str(val) for val in reversed(binary)]), 2)
