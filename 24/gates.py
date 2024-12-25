@@ -127,20 +127,17 @@ class Circuit:
         while queue:
             name = queue.popleft()
 
-            gates = []
             if up:
                 if name in self.gates and name not in found:
                     found.add(name)
-                    gates.append(self.gates[name])
+                    gate = self.gates[name]
+                    queue.append(gate.in1)
+                    queue.append(gate.in2)
             else:
                 for gate in self.gates.values():
                     if name in (gate.in1, gate.in2) and gate.out not in found:
                         found.add(gate.out)
-                        gates.append(gate)
-
-            for gate in gates:
-                queue.append(gate.in1)
-                queue.append(gate.in2)
+                        queue.append(gate.out)
 
         # print(f"found these {up}-streams: {found}")
         # duplicates = list({item.out for item in found if found.count(item) > 1})
@@ -238,11 +235,14 @@ def find_problem_gate_candidates(circuit):
             input_downstreams |= circuit.streams(bit, False)
             output_upstreams |= circuit.streams(bit, True)
             output_upstreams |= circuit.streams(bit + 1, True)
+            # print(input_downstreams)
+            # print(output_upstreams)
+            # candidates |= input_downstreams & output_upstreams
 
     # print(sorted(input_downstreams))
     # print(sorted(output_upstreams))
-    candidates = sorted(list(input_downstreams | output_upstreams)) # XXX FIXME should be &
-    print(candidates)
+    candidates = sorted(list(input_downstreams & output_upstreams))
+    print(f"candidates: {candidates}")
     return candidates
 
 def find_first_bad_bit(circuit, known_swaps):
