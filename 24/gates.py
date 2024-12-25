@@ -227,21 +227,21 @@ def make_circuit(input_lines, gate_lines):
 #     return None
 
 def find_problem_gate_candidates(circuit):
-    input_downstreams = set()
-    output_upstreams = set()
+    candidates = set()
     for bit in circuit.input_bit_indexes():
         if not circuit.test_bit(bit, []):
             print(f"found bad bit: {bit}")
-            input_downstreams |= circuit.streams(bit, False)
-            output_upstreams |= circuit.streams(bit, True)
+            input_downstreams = circuit.streams(bit, False)
+            output_upstreams = circuit.streams(bit, True)
             output_upstreams |= circuit.streams(bit + 1, True)
-            # print(input_downstreams)
-            # print(output_upstreams)
-            # candidates |= input_downstreams & output_upstreams
+            # print(sorted(input_downstreams))
+            # print(sorted(output_upstreams))
+            candidates |= (input_downstreams & output_upstreams)
 
     # print(sorted(input_downstreams))
     # print(sorted(output_upstreams))
-    candidates = sorted(list(input_downstreams & output_upstreams))
+    # candidates = list(input_downstreams & output_upstreams)
+    candidates = sorted(candidates)
     print(f"candidates: {candidates}")
     return candidates
 
@@ -273,14 +273,14 @@ def find_swaps(circuit, candidates, known_swaps, min_bad_bit):
         # print(f"found early-bad bit at {bit}")
         return None
 
-    print(f"got a new bad bit: {first_bad_bit} with {len(known_swaps)} known swaps and {len(candidates)} candidates")
+    # print(f"got a new bad bit: {first_bad_bit} with {len(known_swaps)} known swaps and {len(candidates)} candidates")
     for test_swap in combinations(candidates, 2):
         found_swaps = try_swap(test_swap, circuit, candidates, known_swaps, first_bad_bit)
         if found_swaps is not None:
             print(f"found swaps! {found_swaps}, {known_swaps}")
             return found_swaps
 
-    print(f"no test swaps worked at {first_bad_bit}")
+    # print(f"no test swaps worked at {first_bad_bit}")
     return None
 
 def main(inputfile):
