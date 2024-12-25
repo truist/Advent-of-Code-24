@@ -162,23 +162,25 @@ def handle_zeros(next_zero, circuit1, circuit2, swaps):
     print(f"couldn't handle the zero at {next_zero}")
     return None
 
-def print_upstream(maybe_gate, offset, gates):
+def print_upstream(maybe_gate, gates):
     if maybe_gate in gates:
-        print_gate(gates[maybe_gate], offset, gates)
-    else:
-        spacer = " " * offset
-        print(f"{spacer}{maybe_gate}")
+        return print_gate(gates[maybe_gate], gates)
+    return maybe_gate
 
-def print_gate(gate, offset, gates):
-    spacer = " " * offset
-    print(f"{spacer}{gate.out} ({gate.op})")
+def print_gate(gate, gates):
+    up1 = print_upstream(gate.in1, gates)
+    up2 = print_upstream(gate.in2, gates)
 
-    print_upstream(gate.in1, offset + 1, gates)
-    print_upstream(gate.in2, offset + 1, gates)
+    return f"({up1} {gate.op} {up2})"
 
 def print_gates(circuit):
-    for _, gate in circuit.z_gates():
-        print_gate(gate, 0, circuit.gates)
+    last_line = ""
+    for index, gate in circuit.z_gates():
+        line = print_gate(gate, circuit.gates)
+        # print(f"{index}:", line)
+        # print(f"{index}: {len(line)}")
+        print(f"{index}: {len(line) - len(last_line)}")
+        last_line = line
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
