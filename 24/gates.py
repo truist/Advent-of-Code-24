@@ -6,6 +6,7 @@ Advent of Code 2024-24
 
 import argparse
 from dataclasses import dataclass
+from itertools import combinations
 
 @dataclass
 class Gate:
@@ -15,12 +16,23 @@ class Gate:
     out: str
     value: int
 
-def parse_inputs(input_lines):
+def generate_inputs(input_lines):
     inputs = {}
+    max_x = 0
     for input_line in input_lines.split("\n"):
-        name, value = input_line.split(":")
-        inputs[name.strip()] = int(value.strip())
-    return inputs
+        name, _ = input_line.split(":")
+        name = name.strip()
+        if name.startswith("x"):
+            inputs[name] = 0
+            max_x = max(max_x, int(name[1:3]))
+        else:
+            inputs[name] = 1
+
+    outputs = []
+    for _ in range(max_x + 2):
+        outputs.append(None)
+
+    return inputs, outputs
 
 def parse_gates(gate_lines):
     gates = {}
@@ -43,44 +55,63 @@ def do_gate(op, left, right):
         return left ^ right
     raise ValueError(f"Unknown op: {op}")
 
-def find_val(name, gates, inputs):
+def swap_outputs(gate, other_gate):
+    tmp_val = other_gate.value
+    other_gate.value = gate.value
+    gate.value = tmp_val
+
+def find_swap_partner(gates, swaps, first_gate):
+    index = swaps.index(first_gate.out)
+    if index % 2 == 0:
+        other = swaps[index + 1]
+    else:
+        other = swaps[index - 1]
+    return gates[other]
+
+def find_val(name, gates, inputs, swaps):
     if name in inputs:
         return inputs[name]
 
-    return calc_output(gates[name], gates, inputs)
+    return calc_output(gates[name], gates, inputs, swaps, True)
 
-def calc_output(gate, gates, inputs):
+def calc_output(gate, gates, inputs, swaps, do_swap):
     if gate.value is None:
-        val1 = find_val(gate.in1, gates, inputs)
-        val2 = find_val(gate.in2, gates, inputs)
+        val1 = find_val(gate.in1, gates, inputs, swaps)
+        val2 = find_val(gate.in2, gates, inputs, swaps)
         gate.value = do_gate(gate.op, val1, val2)
+
+        if do_swap and gate.out in swaps:
+            other_gate = find_swap_partner(gates, swaps, gate)
+            calc_output(other_gate, gates, inputs, swaps, False)
+            swap_outputs(gate, other_gate)
 
     return gate.value
 
-def propagate_signals(gates, inputs):
-    z_names = []
+def propagate_signals(gates, inputs, outputs, swaps):
     for name, gate in gates.items():
         if name.startswith("z"):
-            z_names.append(name)
-            calc_output(gate, gates, inputs)
+            outputs[int(name[1:3])] = calc_output(gate, gates, inputs, swaps, True)
 
-    bits = []
-    for name in reversed(sorted(z_names)):
-        bits.append(gates[name].value)
-    return bits
-
+    return outputs
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         input_lines, gate_lines = file.read().split("\n\n")
 
-    inputs = parse_inputs(input_lines)
+    inputs, outputs = generate_inputs(input_lines)
     gates = parse_gates(gate_lines)
 
-    bits = propagate_signals(gates, inputs)
+    counter = 0
+    for swaps in combinations(gates.keys(), 8):
+        outputs = propagate_signals(gates, inputs, outputs, swaps)
 
-    # trick courtesy ChatGPT
-    print(int("".join(map(str, bits)), 2))
+        counter += 1
+        if counter % 10000 == 0:
+            # trick courtesy ChatGPT
+            print(int("".join(map(str, reversed(outputs))), 2))
+
+        for gate in gates.values():
+            gate.value = None
 
 
 if __name__ == "__main__":
