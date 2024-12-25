@@ -69,10 +69,14 @@ class Circuit:
 
         return gate.value
 
+    def z_gates(self):
+        for index in range(len(self.outputs)): # pylint: disable=consider-using-enumerate
+            yield index, self.gates[f"z{index:02}"]
+
     def propagate_to_zero(self, swaps):
         self.reset_signals()
-        for index in range(len(self.outputs)): # pylint: disable=consider-using-enumerate
-            result = self.calc_output(self.gates[f"z{index:02}"], swaps, True)
+        for index, gate in self.z_gates():
+            result = self.calc_output(gate, swaps, True)
             self.outputs[index] = result
             if result == 0:
                 return index
@@ -158,6 +162,23 @@ def handle_zeros(next_zero, circuit1, circuit2, swaps):
     print(f"couldn't handle the zero at {next_zero}")
     return None
 
+def print_upstream(maybe_gate, offset, gates):
+    if maybe_gate in gates:
+        print_gate(gates[maybe_gate], offset, gates)
+    else:
+        spacer = " " * offset
+        print(f"{spacer}{maybe_gate}")
+
+def print_gate(gate, offset, gates):
+    spacer = " " * offset
+    print(f"{spacer}{gate.out} ({gate.op})")
+
+    print_upstream(gate.in1, offset + 1, gates)
+    print_upstream(gate.in2, offset + 1, gates)
+
+def print_gates(circuit):
+    for _, gate in circuit.z_gates():
+        print_gate(gate, 0, circuit.gates)
 
 def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
@@ -165,6 +186,9 @@ def main(inputfile):
 
     circuit1 = make_circuit(input_lines, gate_lines, 1, 0)
     circuit2 = make_circuit(input_lines, gate_lines, 0, 1)
+
+    print_gates(circuit1)
+    return
 
     swaps = []
     next_zero = propagate_to_zero(circuit1, circuit2, swaps)
