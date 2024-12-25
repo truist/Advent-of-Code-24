@@ -82,17 +82,18 @@ class Circuit:
                 return index
         return len(self.outputs) + 1
 
-def generate_inputs(input_lines, x_val, y_val):
+def generate_inputs(input_lines, even_x, odd_x, even_y, odd_y):
     inputs = {}
     max_x = 0
+    index = 0
     for input_line in input_lines.split("\n"):
         name, _ = input_line.split(":")
         name = name.strip()
         if name.startswith("x"):
-            inputs[name] = x_val
+            inputs[name] = even_x if index % 2 == 0 else odd_x
             max_x = max(max_x, int(name[1:3]))
         else:
-            inputs[name] = y_val
+            inputs[name] = even_y if index % 2 == 0 else odd_y
 
     outputs = []
     for _ in range(max_x + 2):
@@ -112,32 +113,35 @@ def parse_gates(gate_lines):
         gates[gate.out] = gate
     return gates
 
-def make_circuit(input_lines, gate_lines, x_val, y_val):
-    inputs, outputs = generate_inputs(input_lines, x_val, y_val)
+def make_circuit(input_lines, gate_lines, even_x, odd_x, even_y, odd_y):
+    inputs, outputs = generate_inputs(input_lines, even_x, odd_x, even_y, odd_y)
     gates = parse_gates(gate_lines)
     return Circuit(gates, inputs, outputs)
 
 def bits_to_decimal(bits):
     return int("".join(map(str, bits)), 2)
 
-def propagate_to_zero(circuit1, circuit2, swaps):
-    return min(circuit1.propagate_to_zero(swaps), circuit2.propagate_to_zero(swaps))
+def propagate_to_zero(circuits, swaps):
+    min_zero = len(circuits[0].outputs) + 1
+    for circuit in circuits:
+        min_zero = min(min_zero, circuit.propagate_to_zero(swaps))
+    return min_zero
 
-def find_swaps(index, circuit1, circuit2, swaps):
+def find_swaps(index, circuits, swaps):
     print(f"looking for swap to fix bit {index}")
     print(f"known swaps: {swaps}")
-    for new_swaps in combinations(circuit1.gates.keys(), 2):
+    for new_swaps in combinations(circuits[0].gates.keys(), 2):
         if new_swaps[0] in swaps or new_swaps[1] in swaps:
             continue
 
         combined_swaps = list(new_swaps) + swaps
-        next_zero = propagate_to_zero(circuit1, circuit2, combined_swaps)
+        next_zero = propagate_to_zero(circuits, combined_swaps)
         if next_zero > index:
             # print(f"found swap! {new_swaps}")
             # print("circuit 1 outputs:", circuit1.outputs, bits_to_decimal(circuit1.outputs))
             # print("circuit 2 outputs:", circuit2.outputs, bits_to_decimal(circuit2.outputs))
 
-            downstream_swaps = handle_zeros(next_zero, circuit1, circuit2, combined_swaps)
+            downstream_swaps = handle_zeros(next_zero, circuits, combined_swaps)
             if downstream_swaps is not None:
                 print("success at the end!")
                 return downstream_swaps
@@ -145,8 +149,8 @@ def find_swaps(index, circuit1, circuit2, swaps):
     print(f"can't find suitable swaps for {index}")
     return None
 
-def handle_zeros(next_zero, circuit1, circuit2, swaps):
-    if next_zero > len(circuit1.outputs):
+def handle_zeros(next_zero, circuits, swaps):
+    if next_zero == len(circuits[0].outputs - 1):
         print("no more zeros!")
         return swaps
 
@@ -154,7 +158,7 @@ def handle_zeros(next_zero, circuit1, circuit2, swaps):
         # print("hit swap limit")
         return None
 
-    downstream_swaps = find_swaps(next_zero, circuit1, circuit2, swaps)
+    downstream_swaps = find_swaps(next_zero, circuits, swaps)
     if downstream_swaps is not None:
         print("success at the end!")
         return downstream_swaps
@@ -192,20 +196,22 @@ def main(inputfile):
     with open(inputfile, 'r', encoding='utf-8') as file:
         input_lines, gate_lines = file.read().split("\n\n")
 
-    circuit1 = make_circuit(input_lines, gate_lines, 1, 0)
-    circuit2 = make_circuit(input_lines, gate_lines, 0, 1)
+    circuits = []
+    circuits.append(make_circuit(input_lines, gate_lines, 1, 1, 0, 0))
+    circuits.append(make_circuit(input_lines, gate_lines, 0, 0, 1, 1))
+    circuits.append(make_circuit(input_lines, gate_lines, 1, 0, 0, 1))
+    circuits.append(make_circuit(input_lines, gate_lines, 0, 1, 1, 0))
 
-    print_gates(circuit1)
-    return
+    # print_gates(circuits[0])
 
     swaps = []
-    next_zero = propagate_to_zero(circuit1, circuit2, swaps)
-    print(circuit1.outputs)
-    print(circuit2.outputs)
+    next_zero = propagate_to_zero(circuits, swaps)
+    for circuit in circuits:
+        print(circuit.outputs)
 
-    swaps = handle_zeros(next_zero, circuit1, circuit2, swaps)
-    print(circuit1.outputs)
-    print(circuit2.outputs)
+    swaps = handle_zeros(next_zero, circuits, swaps)
+    for circuit in circuits:
+        print(circuit.outputs)
     print(swaps)
 
 if __name__ == "__main__":
